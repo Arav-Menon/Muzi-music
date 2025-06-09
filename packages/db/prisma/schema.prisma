@@ -12,7 +12,7 @@ model User {
   username  String     @unique
   email     String     @unique
   password  String
-  Provider  Provider
+  // provider  Provider
   streams   Streams[]
   upvotes   Upvotes[]
   room      Room[]
