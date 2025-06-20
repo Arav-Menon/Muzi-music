@@ -1,13 +1,13 @@
 import CredentialsProvider from "next-auth/providers/credentials";
 import GoogleProvider from "next-auth/providers/google";
 import SpotifyProvider from "next-auth/providers/spotify";
-import { prisma } from "@repo/db/prisma";
+import { prisma } from "../db/src/index"
 import { NextAuthOptions } from "next-auth";
-import bcrypt from "bcrypt"
+// import bcrypt from "bcrypt"
 import { authValidations } from "../lib/inputValidations"
 
 export const authOptions: NextAuthOptions = {
-  providers: [
+  providers: [  
     CredentialsProvider({
       name: "Credentials",
       credentials: {
@@ -34,9 +34,9 @@ export const authOptions: NextAuthOptions = {
         });
 
         
-        if (existingUser) {
-          const passwordMatch = bcrypt.compare(password || "", existingUser?.password)
-          if (!passwordMatch) return null;
+        if ( password === existingUser.password) {
+          // const passwordMatch = bcrypt.compare(password || "", existingUser?.password)
+          // if (password === existingUser.password) return null;
 
           return {
             id: existingUser.id,
@@ -45,7 +45,7 @@ export const authOptions: NextAuthOptions = {
           };
         }
 
-        const hasingPassword = bcrypt.hash(password || "" , 5 )
+        // const hasingPassword = bcrypt.hash(password || "" , 5 )
 
         const newUser = await prisma.user.create({
           data: {
@@ -102,4 +102,7 @@ export const authOptions: NextAuthOptions = {
       return session;
     },
   },
+  pages : {
+    signIn : '/signin'
+  }
 };
