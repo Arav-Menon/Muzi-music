@@ -2,61 +2,104 @@ import CredentialsProvider from "next-auth/providers/credentials";
 import GoogleProvider from "next-auth/providers/google";
 import SpotifyProvider from "next-auth/providers/spotify";
 import { prisma } from "@repo/db/prisma";
+import { NextAuthOptions } from "next-auth";
+import bcrypt from "bcrypt"
+import { authValidations } from "../lib/inputValidations"
 
-export const authoptions = {
+export const authOptions: NextAuthOptions = {
   providers: [
     CredentialsProvider({
-      // The name to display on the sign in form (e.g. 'Sign in with...')
       name: "Credentials",
-      // The credentials is used to generate a suitable form on the sign in page.
-      // You can specify whatever fields you are expecting to be submitted.
-      // e.g. domain, username, password, 2FA token, etc.
-      // You can pass any HTML attribute to the <input> tag through the object.
       credentials: {
-        username: { label: "Username", type: "text", placeholder: "jsmith" },
-        email: {
-          label: "email",
-          type: "email",
-          placeholder: "jsmith@example.com",
-        },
+        username: { label: "Username", type: "text" },  
+        email: { label: "Email", type: "email" },
         password: { label: "Password", type: "password" },
       },
       async authorize(credentials, req) {
-        const { username, email, password } = req.body;
 
-        const addUser = await prisma.user.create({
+        const result = authValidations.safeParse({
+          username : credentials?.username,
+          email : credentials?.email,
+          password : credentials?.password
+        })
+
+        if(!result.success) {
+          throw new Error("Invalid format")
+        }
+
+        const { username, email, password } = result.data
+
+        const existingUser = await prisma.user.findFirst({
+          where: { email },
+        });
+
+        
+        if (existingUser) {
+          const passwordMatch = bcrypt.compare(password || "", existingUser?.password)
+          if (!passwordMatch) return null;
+
+          return {
+            id: existingUser.id,
+            username: existingUser.username,
+            email: existingUser.email,
+          };
+        }
+
+        const hasingPassword = bcrypt.hash(password || "" , 5 )
+
+        const newUser = await prisma.user.create({
           data: {
-            username,
+            //@ts-ignore
+            username ,
+            //@ts-ignore
             email,
-            password,
+            //@ts-ignore
+            password : hasingPassword ,
           },
         });
 
         return {
-          addUser: {
-            username,
-            email,
-            password : "🖕"
-          },
+          id: newUser.id,
+          username: newUser.username,
+          email: newUser.email,
         };
       },
     }),
 
     GoogleProvider({
-      clientId: "process.env.GOOGLE_ID",
-      clientSecret: "process.env.GOOGLE_SECRET",
-      authorization: {
-        params: {
-          prompt: "consent",
-          access_type: "offline",
-          response_type: "code",
-        },
-      },
+      clientId: process.env.GOOGLE_CLIENT_ID ?? "",
+      clientSecret: process.env.GOOGLE_CLIENT_SECRET ?? "",
     }),
 
     SpotifyProvider({
-      clientId: "process.env.SPOTIFY_CLIENT_ID",
-      clientSecret: "process.env.SPOTIFY_CLIENT_SECRET",
+      clientId: process.env.SPOTIFY_CLIENT_ID ?? "",
+      clientSecret: process.env.SPOTIFY_CLIENT_SECRET ?? "",
     }),
   ],
+
+  secret: process.env.NEXTAUTH_SECRET,
+
+  session: {
+    strategy: "jwt", // use JWTs for session
+  },
+
+  callbacks: {
+    async jwt({ token, user }) {
+      if (user) {
+        token.id = user.id;
+        token.email = user.email;
+      }
+      return token;
+    },
+
+    async session({ session, token }) {
+      if (token) {
+        session.user = {
+          id: token.id,
+          email: token.email, 
+        } as any ;
+      }
+      return session;
+    },
+  },
 };
