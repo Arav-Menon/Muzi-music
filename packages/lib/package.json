@@ -13,6 +13,7 @@
     "@repo/db": "workspace:*",
     "@types/bcrypt": "^5.0.2",
     "bcrypt": "^6.0.0",
+    "shadcn": "^2.7.0",
     "zod": "^3.25.67"
   }
 }
