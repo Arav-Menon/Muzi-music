@@ -1,22 +1,22 @@
-name : Continuous deployment to Production
+name: Continuous deployment to Production
 
-on :
-    push :
-        branches : [ main ]
-jobs : 
-    build :
-        runs-on : ubuntu-latest
-        steps :
-            - uses: actions/checkouts@v2
-              with :
-                fetch-depth : 0
+on:
+  push:
+    branches: [main]
 
-            - uses : actions/setup-node@v3    
-              with :
-                node-version : "20"
-            
-                
-            - run : corepack enable
-            
-            - run : pnpm install
+jobs:
+  build:
+    runs-on: ubuntu-latest
 
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v3
+        with:
+          node-version: '20'
+
+      - run: corepack enable
+
+      - run: pnpm install
